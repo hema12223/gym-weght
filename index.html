@@ -380,12 +380,11 @@
   </div>
 </div>
 
-<!-- التطبيق الأساسي (الجدول) - هيكون مخفي لحد ما يتم تسجيل الدخول -->
+<!-- التطبيق الأساسي (الجدول) - هيكون مخفي لحد ما يتم تسجيل الدخول وتحميل البيانات -->
 <div id="app-container" class="wrap" style="display:none;">
   <div class="masthead">
     <div class="brand">
-      <!-- حط رابط اللوجو بتاعك مكان كلمة "رابط_اللوجو_هنا" -->
-<img src="./logo.png" alt="Logo" width="80" height="80" style="object-fit: contain; border-radius: 8px;">      
+      <img src="./logo.png" alt="Logo" width="80" height="80" style="object-fit: contain; border-radius: 8px;">      
       <div class="brand-text">
         <span class="eyebrow">Strength log</span>
         <h1>Weight Training Planner</h1>
@@ -415,13 +414,13 @@
 </div>
 
 <script type="module">
-  // 1. استدعاء مكتبات فايربيز (Auth + Firestore)
+  // 1. استدعاء مكتبات فايربيز (شاملة دوال الـ Offline)
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+  import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
   import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
   // ==========================================
-  // 2. ضيف بيانات إعدادات مشروعك هنا بدال YOUR_...
+  // 2. إعدادات مشروعك
   // ==========================================
   const firebaseConfig = {
     apiKey: "AIzaSyBrW0sBDCBQjYhQaR8-IEu-APyFA7HrzT8",
@@ -433,13 +432,17 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+  // تفعيل الداتا بيز مع وضع الـ Offline 
+  const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+  });
   const auth = getAuth(app);
 
   let currentUserId = null;
-  let isLoginMode = true; // عشان نحدد إحنا في شاشة Login ولا Sign Up
+  let isDataLoaded = false; // عشان نمنع أي تخريف في الحفظ قبل التحميل
+  let isLoginMode = true;
 
-  // === عناصر واجهة تسجيل الدخول ===
+  // === عناصر الواجهة ===
   const authContainer = document.getElementById('auth-container');
   const appContainer = document.getElementById('app-container');
   const authTitle = document.getElementById('auth-title');
@@ -451,7 +454,6 @@
   const authError = document.getElementById('auth-error');
   const logoutBtn = document.getElementById('logout-btn');
 
-  // التبديل بين تسجيل الدخول وإنشاء الحساب
   authToggleBtn.addEventListener('click', () => {
     isLoginMode = !isLoginMode;
     authError.style.display = 'none';
@@ -468,7 +470,6 @@
     }
   });
 
-  // تنفيذ تسجيل الدخول أو إنشاء الحساب
   authActionBtn.addEventListener('click', async () => {
     const email = authEmail.value.trim();
     const password = authPassword.value.trim();
@@ -490,21 +491,19 @@
       authEmail.value = '';
       authPassword.value = '';
     } catch (error) {
-      authError.textContent = error.message; // رسالة الخطأ (زي الباسورد غلط أو الحساب موجود)
+      authError.textContent = error.message;
       authError.style.display = 'block';
     } finally {
       authActionBtn.textContent = isLoginMode ? 'Login' : 'Create Account';
     }
   });
 
-  // تسجيل الخروج
   logoutBtn.addEventListener('click', () => {
     signOut(auth);
   });
 
-
   // ==========================================
-  // كود التطبيق الأساسي بتاعك للجدول والحفظ
+  // التطبيق الأساسي
   // ==========================================
   const WEEKS = ['w1','w2','w3','w4'];
   const WEEK_LABELS = {w1:'Week 1', w2:'Week 2', w3:'Week 3', w4:'Week 4'};
@@ -529,9 +528,9 @@
     saveTimer = setTimeout(saveState, 400);
   }
   
-  // حفظ الداتا في Firestore
+  // دالة الحفظ المعدلة
   async function saveState(){
-    if (!currentUserId) return;
+    if (!currentUserId || !isDataLoaded) return; // الحماية من مسح البيانات
     try{
       await setDoc(doc(db, "users", currentUserId), state);
       const chip = document.getElementById('save-chip');
@@ -540,8 +539,9 @@
     }catch(e){ console.error('save failed', e); }
   }
 
-  // تحميل الداتا من Firestore
+  // دالة التحميل المعدلة
   async function loadState(){
+    isDataLoaded = false;
     try{
       const docRef = doc(db, "users", currentUserId);
       const docSnap = await getDoc(docRef);
@@ -552,16 +552,24 @@
           state = parsed;
         }
       } else {
-        // لو أول مرة ومفيش داتا، هيرفع الداتا الافتراضية
         state = defaultState();
-        await saveState();
+        // مش هنحفظ تلقائي هنا عشان ندي فرصة للمستخدم يعدل الأول
       }
       
       if(!state.days.find(d=>d.id===state.activeDay)){
         state.activeDay = state.days[0].id;
       }
+      
       renderAll();
-    }catch(e){ console.error('load failed', e); }
+      isDataLoaded = true; // الداتا جاهزة
+      appContainer.style.display = 'block'; // نظهر الواجهة بعد التحميل
+
+    }catch(e){ 
+      console.error('load failed', e); 
+      isDataLoaded = true;
+      renderAll();
+      appContainer.style.display = 'block';
+    }
   }
 
   function activeDayObj(){
@@ -722,22 +730,18 @@
     renderTable();
   });
 
-  // ==========================================
-  // مراقبة حالة تسجيل الدخول (عشان نظهر ونخفي الواجهات)
-  // ==========================================
+  // المراقبة المعدلة عشان متظهرش الواجهة قبل التحميل
   onAuthStateChanged(auth, (user) => {
     if (user) {
-      // لو مسجل دخول
       currentUserId = user.uid;
-      authContainer.style.display = 'none'; // نخفي شاشة التسجيل
-      appContainer.style.display = 'block'; // نظهر التطبيق الأساسي
-      loadState(); // نحمل الداتا بتاعته من قاعدة البيانات
+      authContainer.style.display = 'none';
+      loadState(); 
     } else {
-      // لو مش مسجل دخول (أو عمل تسجيل خروج)
       currentUserId = null;
-      state = defaultState(); // نفضي البيانات من الواجهة عشان غيره ميشوفهاش
-      appContainer.style.display = 'none'; // نخفي التطبيق
-      authContainer.style.display = 'block'; // نظهر شاشة التسجيل
+      isDataLoaded = false;
+      state = defaultState(); 
+      appContainer.style.display = 'none'; 
+      authContainer.style.display = 'block'; 
     }
   });
 
