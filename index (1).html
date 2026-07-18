@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weight Training Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink-900:#0b3d24;
+      --ink-800:#12492c;
+      --green-600:#2f8a4c;
+      --green-500:#3f9d5c;
+      --green-400:#4caf6d;
+      --mint-100:#e3f7e8;
+      --mint-200:#cdf0d6;
+      --paper:#ffffff;
+      --amber:#ffb020;
+      --edge:#bfe3c9;
+      --shadow: 0 8px 24px rgba(11,61,36,0.12);
+    }
+    *{box-sizing:border-box;}
+    html,body{margin:0;padding:0;}
+    body{
+      font-family:'Inter',system-ui,sans-serif;
+      background:
+        radial-gradient(1200px 500px at 100% 0%, rgba(63,157,92,0.15), transparent 60%),
+        linear-gradient(160deg,#eef6f0 0%,#dcefe1 22%,#7fc796 55%,#1f6b3d 82%,#0b3d24 100%);
+      min-height:100vh;
+      color:var(--ink-900);
+      padding:28px 18px 60px;
+    }
+    .wrap{max-width:1180px;margin:0 auto;}
+
+    /* ---------- Header ---------- */
+    .masthead{
+      display:flex; align-items:center; gap:16px;
+      flex-wrap:wrap;
+      margin-bottom:20px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:12px;
+      background:var(--ink-900);
+      color:#eafff1;
+      padding:14px 22px;
+      border-radius:14px;
+      box-shadow:var(--shadow);
+      flex:1 1 320px;
+      min-width:260px;
+    }
+    .brand svg{flex:none;}
+    .brand-text{display:flex; flex-direction:column; line-height:1.1;}
+    .brand-text .eyebrow{
+      font-family:'Space Mono', monospace;
+      font-size:11px;
+      letter-spacing:.12em;
+      color:#7CFC9E;
+      text-transform:uppercase;
+    }
+    .brand-text h1{
+      font-family:'Archivo Black', sans-serif;
+      font-size:clamp(20px,3vw,28px);
+      margin:2px 0 0;
+      color:#f2fff6;
+      letter-spacing:.01em;
+    }
+
+    .meta{
+      display:flex; gap:10px; flex-wrap:wrap;
+      flex:2 1 480px;
+    }
+    .meta label{
+      display:flex; flex-direction:column;
+      gap:4px;
+      background:var(--paper);
+      border:1.5px solid var(--edge);
+      border-radius:12px;
+      padding:8px 14px;
+      flex:1 1 140px;
+      box-shadow:var(--shadow);
+    }
+    .meta label span{
+      font-size:10.5px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--green-600);
+      font-weight:700;
+    }
+    .meta input{
+      border:none; outline:none;
+      font-family:'Inter',sans-serif;
+      font-size:14.5px;
+      font-weight:600;
+      color:var(--ink-900);
+      background:transparent;
+    }
+
+    /* ---------- Tabs ---------- */
+    .tabbar{
+      display:flex; align-items:center; gap:8px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    .tab{
+      position:relative;
+      font-family:'Inter',sans-serif;
+      font-weight:700;
+      font-size:14px;
+      padding:10px 18px;
+      border-radius:999px;
+      border:1.5px solid var(--edge);
+      background:var(--paper);
+      color:var(--ink-800);
+      cursor:pointer;
+      transition:transform .12s ease, background .15s ease, color .15s ease;
+      display:flex; align-items:center; gap:8px;
+    }
+    .tab:hover{transform:translateY(-1px);}
+    .tab.active{
+      background:var(--ink-900);
+      color:#eafff1;
+      border-color:var(--ink-900);
+    }
+    .tab .close-x{
+      opacity:.55; font-size:12px; padding:2px;
+      border-radius:50%;
+    }
+    .tab .close-x:hover{opacity:1; background:rgba(255,255,255,0.15);}
+    .tab-input{
+      background:transparent; border:none; outline:none;
+      font:inherit; color:inherit; width:auto;
+      max-width:140px;
+    }
+    .add-day{
+      font-family:'Inter',sans-serif;
+      font-weight:700; font-size:13px;
+      padding:9px 16px; border-radius:999px;
+      border:1.5px dashed var(--green-600);
+      background:transparent;
+      color:var(--ink-900);
+      cursor:pointer;
+    }
+    .add-day:hover{background:var(--mint-100);}
+
+    /* ---------- Table card ---------- */
+    .card{
+      background:var(--paper);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      border:1px solid var(--edge);
+    }
+    .table-scroll{overflow-x:auto;}
+    table{border-collapse:collapse; width:100%; min-width:860px;}
+    thead th{
+      font-family:'Inter',sans-serif;
+      font-size:13px;
+      font-weight:700;
+      color:#fff;
+      padding:10px 8px;
+      text-align:center;
+      border:1px solid rgba(255,255,255,0.25);
+    }
+    thead tr.week-row th{
+      background:var(--green-500);
+      font-family:'Space Mono',monospace;
+      font-size:12.5px;
+      letter-spacing:.04em;
+    }
+    thead tr.week-row th.shaded{background:var(--green-600);}
+    thead tr.sub-row th{
+      background:var(--green-400);
+      font-size:11.5px;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+    thead tr.sub-row th.shaded{background:var(--green-600);}
+    thead th.exercise-head{
+      background:var(--ink-900);
+      text-align:left;
+      padding-left:16px;
+      min-width:180px;
+    }
+
+    tbody tr{border-bottom:1px solid var(--edge);}
+    tbody td{
+      border:1px solid #eef6f0;
+      padding:0;
+      text-align:center;
+    }
+    td.exercise-cell{
+      text-align:left;
+      padding:0 14px;
+      vertical-align:middle;
+      position:relative;
+    }
+    td.exercise-cell textarea{
+      width:100%;
+      border:none; outline:none; resize:none;
+      background:transparent;
+      font-family:'Inter',sans-serif;
+      font-weight:700;
+      font-size:14.5px;
+      color:var(--ink-900);
+      padding:10px 0;
+      line-height:1.25;
+    }
+    td.exercise-cell .remove-ex{
+      position:absolute; top:6px; right:6px;
+      font-size:11px; color:#a3b8ab;
+      cursor:pointer; opacity:0; transition:opacity .15s;
+      background:none; border:none;
+    }
+    tr.ex-first:hover td.exercise-cell .remove-ex{opacity:1;}
+
+    .block-even td.exercise-cell, .block-even td.cell-input{background:var(--mint-200);}
+    .block-odd td.exercise-cell, .block-odd td.cell-input{background:#ffffff;}
+
+    td.cell-input input{
+      width:100%;
+      border:none; outline:none;
+      background:transparent;
+      text-align:center;
+      font-family:'Space Mono',monospace;
+      font-size:13.5px;
+      color:var(--ink-800);
+      padding:9px 2px;
+    }
+    td.cell-input input:focus, td.exercise-cell textarea:focus{
+      outline:2px solid var(--amber);
+      outline-offset:-2px;
+      background:#fffdf5;
+    }
+    td.cell-input input::placeholder{color:#c3d6c9;}
+
+    .toolbar{
+      display:flex; justify-content:space-between; align-items:center;
+      padding:12px 16px;
+      background:var(--mint-100);
+      border-top:1px solid var(--edge);
+    }
+    .add-exercise{
+      font-family:'Inter',sans-serif; font-weight:700; font-size:13px;
+      color:var(--ink-900);
+      background:#fff; border:1.5px solid var(--green-600);
+      border-radius:10px; padding:8px 14px; cursor:pointer;
+    }
+    .add-exercise:hover{background:var(--mint-200);}
+    .save-chip{
+      font-family:'Space Mono',monospace;
+      font-size:12px;
+      color:var(--green-600);
+      display:flex; align-items:center; gap:6px;
+      opacity:0;
+      transition:opacity .3s ease;
+    }
+    .save-chip.show{opacity:1;}
+    .save-chip .dot{
+      width:7px; height:7px; border-radius:50%;
+      background:var(--green-500);
+    }
+
+    .foot{
+      text-align:center;
+      font-family:'Space Mono',monospace;
+      font-size:11.5px;
+      color:#2c5b3d;
+      margin-top:18px;
+      opacity:.75;
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      .tab, .save-chip, .add-day, .add-exercise{transition:none;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="masthead">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+        <path d="M2 9v6M4 7v10M20 7v10M22 9v6M6 12h12M6 9v6M18 9v6" stroke="#7CFC9E" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div class="brand-text">
+        <span class="eyebrow">Strength log</span>
+        <h1>Weight Training Planner</h1>
+      </div>
+    </div>
+    <div class="meta">
+      <label><span>Name</span><input id="f-name" placeholder="Your name" /></label>
+      <label><span>Month number</span><input id="f-month" placeholder="e.g. 1" /></label>
+      <label><span>Split name</span><input id="f-split" placeholder="e.g. Push / Pull / Legs" /></label>
+    </div>
+  </div>
+
+  <div class="tabbar" id="tabbar"></div>
+
+  <div class="card">
+    <div class="table-scroll">
+      <table id="table"></table>
+    </div>
+    <div class="toolbar">
+      <button class="add-exercise" id="add-exercise">+ Add exercise</button>
+      <span class="save-chip" id="save-chip"><span class="dot"></span>Saved</span>
+    </div>
+  </div>
+
+  <div class="foot">Tap any cell to edit &middot; your entries save automatically to this device</div>
+</div>
+
+<script>
+(function(){
+  const WEEKS = ['w1','w2','w3','w4'];
+  const WEEK_LABELS = {w1:'Week 1', w2:'Week 2', w3:'Week 3', w4:'Week 4'};
+  const FIELDS = ['sets','weight','reps'];
+  const STORAGE_KEY = 'wtp:data';
+
+  function emptySet(){
+    return {w1:{sets:'',weight:'',reps:''}, w2:{sets:'',weight:'',reps:''}, w3:{sets:'',weight:'',reps:''}, w4:{sets:'',weight:'',reps:''}};
+  }
+  function emptyExercise(){
+    return { name:'', rows:[emptySet(), emptySet(), emptySet()] };
+  }
+  function defaultDay(title){
+    return { id: 'd'+Date.now()+Math.random().toString(16).slice(2), title, exercises: Array.from({length:6}, emptyExercise) };
+  }
+  function defaultState(){
+    return {
+      name:'', month:'', split:'',
+      activeDay:null,
+      days:[ defaultDay('Chest & Tri'), defaultDay('Back & BI') ]
+    };
+  }
+
+  let state = defaultState();
+  state.activeDay = state.days[0].id;
+
+  let saveTimer = null;
+  function scheduleSave(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveState, 400);
+  }
+  
+  // Updated saveState using localStorage
+  function saveState(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      const chip = document.getElementById('save-chip');
+      chip.classList.add('show');
+      setTimeout(()=>chip.classList.remove('show'), 1200);
+    }catch(e){ console.error('save failed', e); }
+  }
+
+  // Updated loadState using localStorage
+  function loadState(){
+    try{
+      const res = localStorage.getItem(STORAGE_KEY);
+      if(res){
+        const parsed = JSON.parse(res);
+        if(parsed && parsed.days && parsed.days.length){
+          state = parsed;
+          return;
+        }
+      }
+    }catch(e){ /* no saved data yet, use defaults */ }
+  }
+
+  function activeDayObj(){
+    return state.days.find(d => d.id === state.activeDay) || state.days[0];
+  }
+
+  function renderMeta(){
+    document.getElementById('f-name').value = state.name || '';
+    document.getElementById('f-month').value = state.month || '';
+    document.getElementById('f-split').value = state.split || '';
+  }
+
+  function renderTabs(){
+    const bar = document.getElementById('tabbar');
+    bar.innerHTML = '';
+    state.days.forEach(day=>{
+      const tab = document.createElement('div');
+      tab.className = 'tab' + (day.id === state.activeDay ? ' active' : '');
+      const input = document.createElement('input');
+      input.className = 'tab-input';
+      input.value = day.title;
+      input.size = Math.max(6, day.title.length);
+      input.addEventListener('click', e=>e.stopPropagation());
+      input.addEventListener('input', ()=>{ day.title = input.value; input.size = Math.max(6, input.value.length); scheduleSave(); });
+      tab.appendChild(input);
+
+      if(state.days.length > 1){
+        const x = document.createElement('span');
+        x.className = 'close-x';
+        x.textContent = '✕';
+        x.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          if(confirm('Remove "'+day.title+'" day?')){
+            state.days = state.days.filter(d=>d.id!==day.id);
+            if(state.activeDay === day.id) state.activeDay = state.days[0].id;
+            scheduleSave();
+            renderAll();
+          }
+        });
+        tab.appendChild(x);
+      }
+
+      tab.addEventListener('click', ()=>{
+        state.activeDay = day.id;
+        renderAll();
+      });
+      bar.appendChild(tab);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-day';
+    addBtn.textContent = '+ Add day';
+    addBtn.addEventListener('click', ()=>{
+      const d = defaultDay('New Day');
+      state.days.push(d);
+      state.activeDay = d.id;
+      scheduleSave();
+      renderAll();
+    });
+    bar.appendChild(addBtn);
+  }
+
+  function renderTable(){
+    const day = activeDayObj();
+    const table = document.getElementById('table');
+    table.innerHTML = '';
+
+    const thead = document.createElement('thead');
+    const weekRow = document.createElement('tr');
+    weekRow.className = 'week-row';
+    const exTh = document.createElement('th');
+    exTh.className = 'exercise-head';
+    exTh.rowSpan = 2;
+    exTh.textContent = day.title;
+    weekRow.appendChild(exTh);
+    WEEKS.forEach((w,i)=>{
+      const th = document.createElement('th');
+      th.colSpan = 3;
+      th.textContent = WEEK_LABELS[w];
+      if(i % 2 === 0) th.classList.add('shaded');
+      weekRow.appendChild(th);
+    });
+    thead.appendChild(weekRow);
+
+    const subRow = document.createElement('tr');
+    subRow.className = 'sub-row';
+    WEEKS.forEach((w,i)=>{
+      ['Sets','Weight','Reps'].forEach(label=>{
+        const th = document.createElement('th');
+        th.textContent = label;
+        if(i % 2 === 0) th.classList.add('shaded');
+        subRow.appendChild(th);
+      });
+    });
+    thead.appendChild(subRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    day.exercises.forEach((ex, exIdx)=>{
+      const blockClass = exIdx % 2 === 0 ? 'block-odd' : 'block-even';
+      ex.rows.forEach((row, rowIdx)=>{
+        const tr = document.createElement('tr');
+        tr.className = blockClass + (rowIdx===0 ? ' ex-first' : '');
+        if(rowIdx === 0){
+          const td = document.createElement('td');
+          td.className = 'exercise-cell';
+          td.rowSpan = ex.rows.length;
+          const ta = document.createElement('textarea');
+          ta.rows = 1;
+          ta.placeholder = 'Exercise name';
+          ta.value = ex.name;
+          ta.addEventListener('input', ()=>{ ex.name = ta.value; scheduleSave(); });
+          td.appendChild(ta);
+
+          const rm = document.createElement('button');
+          rm.className = 'remove-ex';
+          rm.textContent = '✕ remove';
+          rm.addEventListener('click', ()=>{
+            day.exercises = day.exercises.filter(e=>e!==ex);
+            scheduleSave();
+            renderTable();
+          });
+          td.appendChild(rm);
+          tr.appendChild(td);
+        }
+        WEEKS.forEach((w,i)=>{
+          FIELDS.forEach(field=>{
+            const td = document.createElement('td');
+            td.className = 'cell-input';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.inputMode = field==='weight' ? 'decimal' : 'numeric';
+            input.placeholder = '';
+            input.value = row[w][field];
+            input.addEventListener('input', ()=>{ row[w][field] = input.value; scheduleSave(); });
+            td.appendChild(input);
+            tr.appendChild(td);
+          });
+        });
+        tbody.appendChild(tr);
+      });
+    });
+    table.appendChild(tbody);
+  }
+
+  function renderAll(){
+    renderMeta();
+    renderTabs();
+    renderTable();
+  }
+
+  document.getElementById('f-name').addEventListener('input', e=>{ state.name = e.target.value; scheduleSave(); });
+  document.getElementById('f-month').addEventListener('input', e=>{ state.month = e.target.value; scheduleSave(); });
+  document.getElementById('f-split').addEventListener('input', e=>{ state.split = e.target.value; scheduleSave(); });
+
+  document.getElementById('add-exercise').addEventListener('click', ()=>{
+    activeDayObj().exercises.push(emptyExercise());
+    scheduleSave();
+    renderTable();
+  });
+
+  // Updated initialization
+  (function init(){
+    loadState();
+    if(!state.days.find(d=>d.id===state.activeDay)){
+      state.activeDay = state.days[0].id;
+    }
+    renderAll();
+  })();
+})();
+</script>
+
+</body>
+</html>
