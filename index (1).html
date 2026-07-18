@@ -34,6 +34,75 @@
     }
     .wrap{max-width:1180px;margin:0 auto;}
 
+    /* ---------- Auth Container (Login & Signup) ---------- */
+    #auth-container {
+      max-width: 400px;
+      margin: 60px auto;
+      display: none; /* Hidden by default until checked */
+    }
+    .auth-card {
+      background: var(--paper);
+      border-radius: 16px;
+      padding: 32px 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--edge);
+      text-align: center;
+    }
+    .auth-card h2 {
+      font-family: 'Archivo Black', sans-serif;
+      margin: 0 0 8px;
+      color: var(--ink-900);
+    }
+    .auth-card p {
+      font-size: 14px;
+      color: var(--green-600);
+      margin-bottom: 24px;
+    }
+    .auth-input {
+      width: 100%;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      border: 1.5px solid var(--edge);
+      border-radius: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .auth-input:focus {
+      border-color: var(--green-500);
+    }
+    .auth-btn {
+      width: 100%;
+      background: var(--ink-900);
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .auth-btn:hover {
+      background: var(--ink-800);
+    }
+    .auth-toggle {
+      margin-top: 16px;
+      font-size: 13.5px;
+      color: var(--ink-800);
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .error-msg {
+      color: #d32f2f;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+      font-weight: 600;
+    }
+
     /* ---------- Header ---------- */
     .masthead{
       display:flex; align-items:center; gap:16px;
@@ -49,6 +118,7 @@
       box-shadow:var(--shadow);
       flex:1 1 320px;
       min-width:260px;
+      position: relative;
     }
     .brand svg{flex:none;}
     .brand-text{display:flex; flex-direction:column; line-height:1.1;}
@@ -66,6 +136,22 @@
       color:#f2fff6;
       letter-spacing:.01em;
     }
+    .logout-btn {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .logout-btn:hover { background: rgba(255, 255, 255, 0.2); }
 
     .meta{
       display:flex; gap:10px; flex-wrap:wrap;
@@ -278,7 +364,24 @@
 </head>
 <body>
 
-<div class="wrap">
+<!-- شاشة تسجيل الدخول وإنشاء الحساب -->
+<div id="auth-container">
+  <div class="auth-card">
+    <h2 id="auth-title">Login</h2>
+    <p id="auth-subtitle">Welcome back to your Strength Log</p>
+    
+    <div id="auth-error" class="error-msg"></div>
+
+    <input type="email" id="auth-email" class="auth-input" placeholder="Email address" required>
+    <input type="password" id="auth-password" class="auth-input" placeholder="Password" required>
+    
+    <button id="auth-action-btn" class="auth-btn">Login</button>
+    <div id="auth-toggle-btn" class="auth-toggle">Don't have an account? Sign up</div>
+  </div>
+</div>
+
+<!-- التطبيق الأساسي (الجدول) - هيكون مخفي لحد ما يتم تسجيل الدخول -->
+<div id="app-container" class="wrap" style="display:none;">
   <div class="masthead">
     <div class="brand">
       <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
@@ -288,6 +391,7 @@
         <span class="eyebrow">Strength log</span>
         <h1>Weight Training Planner</h1>
       </div>
+      <button id="logout-btn" class="logout-btn">Log out</button>
     </div>
     <div class="meta">
       <label><span>Name</span><input id="f-name" placeholder="Your name" /></label>
@@ -308,25 +412,108 @@
     </div>
   </div>
 
-  <div class="foot">Tap any cell to edit &middot; your entries save automatically to this device</div>
+  <div class="foot">Tap any cell to edit &middot; Auto-saved to your account</div>
 </div>
 
-<script>
-(function(){
+<script type="module">
+  // 1. استدعاء مكتبات فايربيز (Auth + Firestore)
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+  // ==========================================
+  // 2. ضيف بيانات إعدادات مشروعك هنا بدال YOUR_...
+  // ==========================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyBrW0sBDCBQjYhQaR8-IEu-APyFA7HrzT8",
+    authDomain: "jym-weght.firebaseapp.com",
+    projectId: "jym-weght",
+    storageBucket: "jym-weght.firebasestorage.app",
+    messagingSenderId: "119116611026",
+    appId: "1:119116611026:web:7111b87968647afa52dc0b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  let currentUserId = null;
+  let isLoginMode = true; // عشان نحدد إحنا في شاشة Login ولا Sign Up
+
+  // === عناصر واجهة تسجيل الدخول ===
+  const authContainer = document.getElementById('auth-container');
+  const appContainer = document.getElementById('app-container');
+  const authTitle = document.getElementById('auth-title');
+  const authSubtitle = document.getElementById('auth-subtitle');
+  const authEmail = document.getElementById('auth-email');
+  const authPassword = document.getElementById('auth-password');
+  const authActionBtn = document.getElementById('auth-action-btn');
+  const authToggleBtn = document.getElementById('auth-toggle-btn');
+  const authError = document.getElementById('auth-error');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  // التبديل بين تسجيل الدخول وإنشاء الحساب
+  authToggleBtn.addEventListener('click', () => {
+    isLoginMode = !isLoginMode;
+    authError.style.display = 'none';
+    if (isLoginMode) {
+      authTitle.textContent = 'Login';
+      authSubtitle.textContent = 'Welcome back to your Strength Log';
+      authActionBtn.textContent = 'Login';
+      authToggleBtn.textContent = "Don't have an account? Sign up";
+    } else {
+      authTitle.textContent = 'Sign Up';
+      authSubtitle.textContent = 'Create an account to save your logs';
+      authActionBtn.textContent = 'Create Account';
+      authToggleBtn.textContent = "Already have an account? Login";
+    }
+  });
+
+  // تنفيذ تسجيل الدخول أو إنشاء الحساب
+  authActionBtn.addEventListener('click', async () => {
+    const email = authEmail.value.trim();
+    const password = authPassword.value.trim();
+    authError.style.display = 'none';
+
+    if(!email || !password) {
+      authError.textContent = "Please enter email and password.";
+      authError.style.display = 'block';
+      return;
+    }
+
+    authActionBtn.textContent = 'Please wait...';
+    try {
+      if (isLoginMode) {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+      }
+      authEmail.value = '';
+      authPassword.value = '';
+    } catch (error) {
+      authError.textContent = error.message; // رسالة الخطأ (زي الباسورد غلط أو الحساب موجود)
+      authError.style.display = 'block';
+    } finally {
+      authActionBtn.textContent = isLoginMode ? 'Login' : 'Create Account';
+    }
+  });
+
+  // تسجيل الخروج
+  logoutBtn.addEventListener('click', () => {
+    signOut(auth);
+  });
+
+
+  // ==========================================
+  // كود التطبيق الأساسي بتاعك للجدول والحفظ
+  // ==========================================
   const WEEKS = ['w1','w2','w3','w4'];
   const WEEK_LABELS = {w1:'Week 1', w2:'Week 2', w3:'Week 3', w4:'Week 4'};
   const FIELDS = ['sets','weight','reps'];
-  const STORAGE_KEY = 'wtp:data';
 
-  function emptySet(){
-    return {w1:{sets:'',weight:'',reps:''}, w2:{sets:'',weight:'',reps:''}, w3:{sets:'',weight:'',reps:''}, w4:{sets:'',weight:'',reps:''}};
-  }
-  function emptyExercise(){
-    return { name:'', rows:[emptySet(), emptySet(), emptySet()] };
-  }
-  function defaultDay(title){
-    return { id: 'd'+Date.now()+Math.random().toString(16).slice(2), title, exercises: Array.from({length:6}, emptyExercise) };
-  }
+  function emptySet(){ return {w1:{sets:'',weight:'',reps:''}, w2:{sets:'',weight:'',reps:''}, w3:{sets:'',weight:'',reps:''}, w4:{sets:'',weight:'',reps:''}}; }
+  function emptyExercise(){ return { name:'', rows:[emptySet(), emptySet(), emptySet()] }; }
+  function defaultDay(title){ return { id: 'd'+Date.now()+Math.random().toString(16).slice(2), title, exercises: Array.from({length:6}, emptyExercise) }; }
   function defaultState(){
     return {
       name:'', month:'', split:'',
@@ -336,36 +523,46 @@
   }
 
   let state = defaultState();
-  state.activeDay = state.days[0].id;
-
   let saveTimer = null;
+
   function scheduleSave(){
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveState, 400);
   }
   
-  // Updated saveState using localStorage
-  function saveState(){
+  // حفظ الداتا في Firestore
+  async function saveState(){
+    if (!currentUserId) return;
     try{
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      await setDoc(doc(db, "users", currentUserId), state);
       const chip = document.getElementById('save-chip');
       chip.classList.add('show');
       setTimeout(()=>chip.classList.remove('show'), 1200);
     }catch(e){ console.error('save failed', e); }
   }
 
-  // Updated loadState using localStorage
-  function loadState(){
+  // تحميل الداتا من Firestore
+  async function loadState(){
     try{
-      const res = localStorage.getItem(STORAGE_KEY);
-      if(res){
-        const parsed = JSON.parse(res);
-        if(parsed && parsed.days && parsed.days.length){
+      const docRef = doc(db, "users", currentUserId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const parsed = docSnap.data();
+        if (parsed && parsed.days && parsed.days.length) {
           state = parsed;
-          return;
         }
+      } else {
+        // لو أول مرة ومفيش داتا، هيرفع الداتا الافتراضية
+        state = defaultState();
+        await saveState();
       }
-    }catch(e){ /* no saved data yet, use defaults */ }
+      
+      if(!state.days.find(d=>d.id===state.activeDay)){
+        state.activeDay = state.days[0].id;
+      }
+      renderAll();
+    }catch(e){ console.error('load failed', e); }
   }
 
   function activeDayObj(){
@@ -498,7 +695,6 @@
             const input = document.createElement('input');
             input.type = 'text';
             input.inputMode = field==='weight' ? 'decimal' : 'numeric';
-            input.placeholder = '';
             input.value = row[w][field];
             input.addEventListener('input', ()=>{ row[w][field] = input.value; scheduleSave(); });
             td.appendChild(input);
@@ -527,15 +723,25 @@
     renderTable();
   });
 
-  // Updated initialization
-  (function init(){
-    loadState();
-    if(!state.days.find(d=>d.id===state.activeDay)){
-      state.activeDay = state.days[0].id;
+  // ==========================================
+  // مراقبة حالة تسجيل الدخول (عشان نظهر ونخفي الواجهات)
+  // ==========================================
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      // لو مسجل دخول
+      currentUserId = user.uid;
+      authContainer.style.display = 'none'; // نخفي شاشة التسجيل
+      appContainer.style.display = 'block'; // نظهر التطبيق الأساسي
+      loadState(); // نحمل الداتا بتاعته من قاعدة البيانات
+    } else {
+      // لو مش مسجل دخول (أو عمل تسجيل خروج)
+      currentUserId = null;
+      state = defaultState(); // نفضي البيانات من الواجهة عشان غيره ميشوفهاش
+      appContainer.style.display = 'none'; // نخفي التطبيق
+      authContainer.style.display = 'block'; // نظهر شاشة التسجيل
     }
-    renderAll();
-  })();
-})();
+  });
+
 </script>
 
 </body>
